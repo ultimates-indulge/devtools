@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html ng-app="plunker">
+
+<head>
+    <meta charset="utf-8" />
+    <title>mobile detect check</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.9/angular.min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/mobile-detect@1.4.3/mobile-detect.min.js"></script>
+    <!--<script src="http://192.168.0.147:5555/mobile-detect.min.js"></script>-->
+    <script>
+        var app = angular.module('plunker', []);
+
+        app.value('MobileDetect', window.MobileDetect);
+        app.directive('windowSize', function ($window) {
+            return function (scope, element) {
+                var w = angular.element($window);
+                scope.getWindowDimensions = function () {
+                    return {
+                        'h': w.height(),
+                        'w': w.width()
+                    };
+                };
+                scope.$watch(scope.getWindowDimensions, function (newValue, oldValue) {
+                    scope.windowHeight = newValue.h;
+                    scope.windowWidth = newValue.w;
+                    scope.style = function () {
+                        return {
+                            'height': (newValue.h - 100) + 'px',
+                            'width': (newValue.w - 100) + 'px'
+                        };
+                    };
+                }, true);
+
+                w.bind('resize', function () {
+                    scope.$apply();
+                });
+            }
+        });
+
+        app.controller('MainCtrl', function ($scope, MobileDetect) {
+            var vm = this;
+            vm.input = {
+                userAgent: window.navigator.userAgent,
+                maxPhoneWidth: 600
+            };
+            vm.outcome = [];
+
+            function analyze(userAgent, maxPhoneWidth) {
+                var md = new MobileDetect(userAgent, parseInt(maxPhoneWidth, 10)),
+                    rules = MobileDetect._impl.mobileDetectRules,
+                    outcome = [];
+
+                outcome.push({
+                    key: 'phone()',
+                    val: md.phone()
+                });
+                outcome.push({
+                    key: 'tablet()',
+                    val: md.tablet()
+                });
+                outcome.push({
+                    key: 'mobile()',
+                    val: md.mobile()
+                });
+                outcome.push({
+                    key: 'os()',
+                    val: md.os()
+                });
+                outcome.push({
+                    key: 'userAgent()',
+                    val: md.userAgent()
+                });
+                outcome.push({
+                    key: 'mobileGrade()',
+                    val: md.mobileGrade()
+                });
+                outcome.push({
+                    key: 'smaller side',
+                    val: MobileDetect._impl.getDeviceSmallerSide()
+                });
+                outcome.push({
+                    key: '_version',
+                    val: MobileDetect.version || '(<1.3.3)'
+                });
+
+                ['tablets', 'phones', 'oss', 'uas', 'utils'].forEach(function (section) {
+                    Object.keys(rules[section]).filter(function (key) {
+                        return md.is(key);
+                    }).forEach(function (key) {
+                        outcome.push({
+                            key: 'is("' + key + '")',
+                            val: true
+                        });
+                    });
+                });
+
+                Object.keys(rules.props).forEach(function (propKey) {
+                    var version;
+                    version = md.versionStr(propKey);
+                    if (version) {
+                        outcome.push({
+                            key: 'versionStr("' + propKey + '")',
+                            val: '"' + version + '"'
+                        });
+                    }
+                    version = md.version(propKey);
+                    if (version) {
+                        outcome.push({
+                            key: 'version("' + propKey + '")',
+                            val: version
+                        });
+                    }
+                });
+
+                return outcome;
+            }
+
+            $scope.$watch('vm.input', function (input) {
+                try {
+                    vm.outcome = analyze(input.userAgent, parseInt(input.maxPhoneWidth, 10));
+                } catch (e) {
+                    vm.outcome = [{
+                        key: 'Error occurred',
+                        val: '' + e
+                    }];
+                }
+            }, true);
+        });
+    </script>
+    <style class="cp-pen-styles">
+        div.parent {
+            border: 1px solid #0f0f0f;
+
+            padding: 30px;
+            min-width: 300px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Source Code Pro', monospace, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        dl {
+            display: block;
+            clear: both;
+        }
+
+        .function {
+            color: #69c;
+        }
+
+        .value {
+            color: #f2777a;
+        }
+    </style>
+</head>
+
+<body ng-controller="MainCtrl as vm">
+    <div class="parent">
+        <h1>Mobile Detect </h1>
+
+        <h2>Input</h2>
+        <label for="userAgent">User-Agent:</label>
+        <label id="userAgent"> {{vm.input.userAgent}}</label>
+        <label for="maxPhoneWidth">maxPhoneWidth (-1 to disable)</label>
+        <label id="maxPhoneWidth"> {{vm.input.maxPhoneWidth}}</label>
+        <h2>Result:</h2>
+
+        <div window-size my-directive>
+                
+               
+            <span class="function">Window height: </span> <span class="value"> {{windowHeight}}px</span><br />
+            <span class="function">Window width: </span> <span class="value"> {{windowWidth}}px</span>
+
+
+            <br />
+
+        </div>
+        <dl>
+            <dt ng-repeat="item in vm.outcome">
+                <span class="function">{{item.key}} </span>
+                <span class="value"> {{item.val || '-'}}</span>
+            </dt>
+
+
+        </dl>
+    </div>
+</body>
+
+</html>
